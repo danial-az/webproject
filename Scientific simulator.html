@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>شبیه‌سازی فیزیک و ریاضی در p5.js</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.7.0/p5.min.js"></script>
+    <style>
+        body {
+            font-family: 'Tahoma', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-align: center;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .subtitle {
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-family: 'Tahoma', sans-serif;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(5px);
+        }
+        
+        button:hover {
+            background: rgba(255, 255, 255, 0.3);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-2px);
+        }
+        
+        button.active {
+            background: rgba(255, 255, 255, 0.4);
+            border-color: rgba(255, 255, 255, 0.7);
+        }
+        
+        #canvas-container {
+            margin: 20px 0;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-panel {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .stat-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #4facfe;
+        }
+        
+        .instructions {
+            text-align: right;
+            line-height: 1.8;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🌊 شبیه‌سازی فیزیک و ریاضی</h1>
+        <p class="subtitle">نمایش تعاملی مفاهیم فیزیک و ریاضی با استفاده از p5.js</p>
+        
+        <div class="controls">
+            <button onclick="setDemo('gravity')" id="gravity-btn" class="active">🌍 جاذبه و پرتاب</button>
+            <button onclick="setDemo('pendulum')" id="pendulum-btn">⚖️ آونگ</button>
+            <button onclick="setDemo('waves')" id="waves-btn">🌊 امواج</button>
+            <button onclick="setDemo('particles')" id="particles-btn">✨ ذرات</button>
+            <button onclick="setDemo('fractal')" id="fractal-btn">🌳 فراکتال</button>
+        </div>
+        
+        <div id="canvas-container"></div>
+        
+        <div class="info-panel">
+            <div id="demo-info">
+                <h3>🌍 شبیه‌سازی جاذبه و حرکت پرتابی</h3>
+                <div class="instructions">
+                    <strong>نحوه استفاده:</strong><br>
+                    • کلیک و کشیدن برای پرتاب توپ<br>
+                    • هر چه بیشتر کشیده باشید، سرعت اولیه بیشتر می‌شود<br>
+                    • مشاهده مسیر حرکت و اثر جاذبه<br>
+                    • فیزیک واقعی: v = v₀ + gt و s = v₀t + ½gt²
+                </div>
+            </div>
+            
+            <div class="stats">
+                <div class="stat-item">
+                    <strong>تعداد پرتابه‌ها:</strong>
+                    <span id="projectile-count">0</span>
+                </div>
+                <div class="stat-item">
+                    <strong>سرعت اولیه:</strong>
+                    <span id="initial-velocity">0</span> پیکسل/فریم
+                </div>
+                <div class="stat-item">
+                    <strong>زاویه پرتاب:</strong>
+                    <span id="launch-angle">0°</span>
+                </div>
+                <div class="stat-item">
+                    <strong>برد پرتابه:</strong>
+                    <span id="projectile-range">0</span> پیکسل
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentDemo = 'gravity';
+        let canvas;
+        
+        // متغیرهای مشترک
+        let projectiles = [];
+        let pendulums = [];
+        let particles = [];
+        let waves = [];
+        let gravity;
+        let mouseStartX, mouseStartY;
+        let isDragging = false;
+        
+        // متغیرهای فراکتال
+        let angle = 0;
+        
+        // متغیرهای آماری
+        let stats = {
+            projectileCount: 0,
+            initialVelocity: 0,
+            launchAngle: 0,
+            range: 0
+        };
+
+        function setup() {
+            canvas = createCanvas(800, 500);
+            canvas.parent('canvas-container');
+            
+            gravity = createVector(0, 0.3);
+            
+            // مقداردهی اولیه آونگ‌ها
+            for(let i = 0; i < 3; i++) {
+                pendulums.push({
+                    x: 200 + i * 200,
+                    y: 50,
+                    length: 150 + i * 30,
+                    angle: PI/4 - i * 0.3,
+                    angularVel: 0,
+                    color: [100 + i * 50, 150 + i * 30, 255 - i * 40]
+                });
+            }
+            
+            // مقداردهی اولیه امواج
+            for(let i = 0; i < 4; i++) {
+                waves.push({
+                    amplitude: 30 + i * 15,
+                    frequency: 0.01 + i * 0.005,
+                    phase: i * PI/2,
+                    speed: 0.02 + i * 0.01
+                });
+            }
+        }
+
+        function draw() {
+            background(20, 30, 50);
+            
+            switch(currentDemo) {
+                case 'gravity':
+                    drawGravityDemo();
+                    break;
+                case 'pendulum':
+                    drawPendulumDemo();
+                    break;
+                case 'waves':
+                    drawWavesDemo();
+                    break;
+                case 'particles':
+                    drawParticlesDemo();
+                    break;
+                case 'fractal':
+                    drawFractalDemo();
+                    break;
+            }
+            
+            updateStats();
+        }
+
+        function drawGravityDemo() {
+            // رسم زمین
+            stroke(100, 255, 100);
+            strokeWeight(3);
+            line(0, height - 30, width, height - 30);
+            
+            // رسم خط هدایت
+            if(isDragging) {
+                stroke(255, 100, 100, 150);
+                strokeWeight(2);
+                line(mouseStartX, mouseStartY, mouseX, mouseY);
+                
+                // نمایش سرعت اولیه
+                let vel = createVector(mouseX - mouseStartX, mouseY - mouseStartY);
+                vel.mult(0.3);
+                stats.initialVelocity = vel.mag().toFixed(1);
+                stats.launchAngle = (-atan2(vel.y, vel.x) * 180 / PI).toFixed(0);
+                
+                // نمایش پیش‌بینی مسیر
+                stroke(255, 255, 0, 100);
+                strokeWeight(1);
+                noFill();
+                beginShape();
+                for(let t = 0; t < 100; t += 2) {
+                    let x = mouseStartX + vel.x * t;
+                    let y = mouseStartY + vel.y * t + 0.5 * gravity.y * t * t;
+                    if(y > height - 30 || x > width) break;
+                    vertex(x, y);
+                }
+                endShape();
+            }
+            
+            // به‌روزرسانی پرتابه‌ها
+            for(let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                
+                p.velocity.add(gravity);
+                p.position.add(p.velocity);
+                
+                // اضافه کردن به مسیر
+                p.trail.push(p.position.copy());
+                if(p.trail.length > 30) {
+                    p.trail.splice(0, 1);
+                }
+                
+                // رسم مسیر
+                stroke(255, 150 + sin(frameCount * 0.1) * 50, 100, 200);
+                strokeWeight(2);
+                for(let j = 1; j < p.trail.length; j++) {
+                    let alpha = map(j, 0, p.trail.length, 0, 255);
+                    stroke(255, 100, 50, alpha);
+                    line(p.trail[j-1].x, p.trail[j-1].y, p.trail[j].x, p.trail[j].y);
+                }
+                
+                // رسم پرتابه
+                fill(255, 200 + sin(frameCount * 0.2 + i) * 55, 100);
+                noStroke();
+                ellipse(p.position.x, p.position.y, p.size, p.size);
+                
+                // حذف پرتابه
+                if(p.position.y > height - 30 || p.position.x > width) {
+                    stats.range = p.position.x;
+                    projectiles.splice(i, 1);
+                }
+            }
+        }
+
+        function drawPendulumDemo() {
+            for(let p of pendulums) {
+                // محاسبه نیروها
+                let gravity = 0.4;
+                let angularAcc = (-gravity / p.length) * sin(p.angle);
+                
+                p.angularVel += angularAcc;
+                p.angularVel *= 0.999; // میرایی بسیار کم برای حفظ انرژی
+                p.angle += p.angularVel;
+                
+                // موقعیت وزنه
+                let bobX = p.x + p.length * sin(p.angle);
+                let bobY = p.y + p.length * cos(p.angle);
+                
+                // رسم ریسمان
+                stroke(200, 200, 200);
+                strokeWeight(2);
+                line(p.x, p.y, bobX, bobY);
+                
+                // رسم مسیر (قوس دایره)
+                stroke(p.color[0], p.color[1], p.color[2], 50);
+                strokeWeight(1);
+                noFill();
+                let startAngle = -PI/3;
+                let endAngle = PI/3;
+                arc(p.x, p.y, p.length * 2, p.length * 2, startAngle, endAngle);
+                
+                // نقطه تکیه
+                fill(100);
+                noStroke();
+                ellipse(p.x, p.y, 8, 8);
+                
+                // وزنه
+                fill(p.color[0], p.color[1], p.color[2]);
+                ellipse(bobX, bobY, 20, 20);
+                
+                // محاسبه انرژی‌ها (فیزیک صحیح)
+                let mass = 1; // جرم واحد
+                let g = 0.4;  // شتاب جاذبه
+                
+                // انرژی جنبشی: KE = 0.5 * m * (L * ω)²
+                let linearVelocity = abs(p.angularVel * p.length);
+                let ke = 0.5 * mass * linearVelocity * linearVelocity;
+                
+                // انرژی پتانسیل: PE = mgh = mg * L * (1 - cos(θ))
+                let height = p.length * (1 - cos(p.angle));
+                let pe = mass * g * height;
+                
+                // انرژی کل
+                let totalEnergy = ke + pe;
+                
+                // نمایش انرژی‌ها
+                fill(255);
+                textAlign(CENTER);
+                textSize(11);
+                text(`KE: ${ke.toFixed(2)}`, p.x, p.y + p.length + 30);
+                text(`PE: ${pe.toFixed(2)}`, p.x, p.y + p.length + 45);
+                text(`Total: ${totalEnergy.toFixed(2)}`, p.x, p.y + p.length + 60);
+                
+                // نمایش نوار انرژی
+                let barWidth = 60;
+                let barHeight = 8;
+                let barY = p.y + p.length + 75;
+                
+                // نوار کل انرژی (زمینه)
+                fill(50);
+                rect(p.x - barWidth/2, barY, barWidth, barHeight);
+                
+                if(totalEnergy > 0) {
+                    // نوار انرژی جنبشی (قرمز)
+                    fill(255, 100, 100);
+                    let keWidth = (ke / totalEnergy) * barWidth;
+                    rect(p.x - barWidth/2, barY, keWidth, barHeight);
+                    
+                    // نوار انرژی پتانسیل (آبی)
+                    fill(100, 100, 255);
+                    let peWidth = (pe / totalEnergy) * barWidth;
+                    rect(p.x - barWidth/2 + keWidth, barY, peWidth, barHeight);
+                }
+                
+                // قاب نوار
+                noFill();
+                stroke(255);
+                rect(p.x - barWidth/2, barY, barWidth, barHeight);
+            }
+            
+            // اطلاعات بقای انرژی
+            fill(255);
+            textAlign(LEFT);
+            textSize(14);
+            text('⚖️ قانون بقای انرژی: KE + PE = ثابت', 20, 30);
+            text('🔴 قرمز: انرژی جنبشی (KE)', 20, 50);
+            text('🔵 آبی: انرژی پتانسیل (PE)', 20, 70);
+            text('کلیک نزدیک آونگ برای اختلال', 20, 90);
+        }
+
+        function drawWavesDemo() {
+            // گرادیانت پس‌زمینه
+            for(let i = 0; i <= height; i++) {
+                let alpha = map(i, 0, height, 0, 1);
+                let c = lerpColor(color(50, 100, 200), color(20, 50, 100), alpha);
+                stroke(c);
+                line(0, i, width, i);
+            }
+            
+            // رسم امواج
+            for(let w = 0; w < waves.length; w++) {
+                let wave = waves[w];
+                
+                fill(255, 255, 255, 100 - w * 20);
+                noStroke();
+                
+                beginShape();
+                vertex(0, height);
+                
+                for(let x = 0; x <= width; x += 3) {
+                    let y = height/2 + wave.amplitude * sin(x * wave.frequency + wave.phase + frameCount * wave.speed);
+                    vertex(x, y);
+                }
+                
+                vertex(width, height);
+                endShape(CLOSE);
+                
+                wave.phase += wave.speed;
+            }
+            
+            // نمایش معادله موج
+            fill(255);
+            textAlign(LEFT);
+            textSize(14);
+            text('معادله موج: y = A × sin(fx + φ + t)', 20, 30);
+            text(`A: دامنه، f: فرکانس، φ: فاز، t: زمان`, 20, 50);
+        }
+
+        function drawParticlesDemo() {
+            // تولید ذرات جدید
+            if(frameCount % 3 == 0) {
+                particles.push({
+                    x: width/2 + random(-20, 20),
+                    y: height - 50,
+                    vx: random(-3, 3),
+                    vy: random(-8, -3),
+                    life: 255,
+                    size: random(3, 8),
+                    color: [random(200, 255), random(100, 200), random(50, 150)]
+                });
+            }
+            
+            // به‌روزرسانی ذرات
+            for(let i = particles.length - 1; i >= 0; i--) {
+                let p = particles[i];
+                
+                // فیزیک
+                p.vy += 0.1; // جاذبه
+                p.vx *= 0.99; // مقاومت هوا
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 3;
+                
+                // رسم
+                let alpha = map(p.life, 0, 255, 0, 255);
+                fill(p.color[0], p.color[1], p.color[2], alpha);
+                noStroke();
+                ellipse(p.x, p.y, p.size, p.size);
+                
+                // حذف ذرات مرده
+                if(p.life <= 0 || p.y > height) {
+                    particles.splice(i, 1);
+                }
+            }
+            
+            // نمایش منبع
+            fill(255, 200, 0);
+            ellipse(width/2, height - 50, 15, 15);
+        }
+
+        function drawFractalDemo() {
+            translate(width/2, height - 50);
+            stroke(100, 255, 100);
+            strokeWeight(2);
+            
+            angle = map(mouseX, 0, width, 0, PI/2);
+            
+            branch(80);
+            
+            // اطلاعات
+            fill(255);
+            textAlign(LEFT);
+            text(`زاویه: ${(angle * 180 / PI).toFixed(1)}°`, -width/2 + 20, -height + 80);
+            text('حرکت ماوس برای تغییر زاویه', -width/2 + 20, -height + 100);
+        }
+
+        function branch(len) {
+            line(0, 0, 0, -len);
+            translate(0, -len);
+            
+            if(len > 4) {
+                push();
+                rotate(angle);
+                branch(len * 0.67);
+                pop();
+                
+                push();
+                rotate(-angle);
+                branch(len * 0.67);
+                pop();
+            }
+        }
+
+        function mousePressed() {
+            if(currentDemo === 'gravity') {
+                mouseStartX = mouseX;
+                mouseStartY = mouseY;
+                isDragging = true;
+            } else if(currentDemo === 'pendulum') {
+                // اعمال اختلال به آونگ‌ها
+                for(let p of pendulums) {
+                    if(dist(mouseX, mouseY, p.x, p.y) < 100) {
+                        p.angularVel += random(-0.2, 0.2);
+                    }
+                }
+            }
+        }
+
+        function mouseReleased() {
+            if(currentDemo === 'gravity' && isDragging) {
+                let velocity = createVector(mouseX - mouseStartX, mouseY - mouseStartY);
+                velocity.mult(0.3);
+                
+                projectiles.push({
+                    position: createVector(mouseStartX, mouseStartY),
+                    velocity: velocity.copy(),
+                    trail: [],
+                    size: 12
+                });
+                
+                stats.projectileCount++;
+                isDragging = false;
+            }
+        }
+
+        function updateStats() {
+            document.getElementById('projectile-count').textContent = stats.projectileCount;
+            document.getElementById('initial-velocity').textContent = stats.initialVelocity;
+            document.getElementById('launch-angle').textContent = stats.launchAngle + '°';
+            document.getElementById('projectile-range').textContent = Math.round(stats.range);
+        }
+
+        function setDemo(demo) {
+            currentDemo = demo;
+            
+            // پاک کردن داده‌های قبلی
+            projectiles = [];
+            particles = [];
+            
+            // به‌روزرسانی UI
+            document.querySelectorAll('button').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(demo + '-btn').classList.add('active');
+            
+            // تغییر اطلاعات
+            const infoPanel = document.getElementById('demo-info');
+            const demoInfos = {
+                gravity: {
+                    title: '🌍 شبیه‌سازی جاذبه و حرکت پرتابی',
+                    instructions: `
+                        <strong>نحوه استفاده:</strong><br>
+                        • کلیک و کشیدن برای پرتاب توپ<br>
+                        • هر چه بیشتر کشیده باشید، سرعت اولیه بیشتر می‌شود<br>
+                        • مشاهده مسیر حرکت و اثر جاذبه<br>
+                        • فیزیک واقعی: v = v₀ + gt و s = v₀t + ½gt²
+                    `
+                },
+                pendulum: {
+                    title: '⚖️ شبیه‌سازی آونگ ساده',
+                    instructions: `
+                        <strong>نحوه استفاده:</strong><br>
+                        • کلیک نزدیک آونگ‌ها برای اعمال اختلال<br>
+                        • مشاهده تبدیل انرژی جنبشی و پتانسیل<br>
+                        • قانون بقای انرژی: KE + PE = const<br>
+                        • دوره تناوب: T = 2π√(L/g)
+                    `
+                },
+                waves: {
+                    title: '🌊 شبیه‌سازی امواج اقیانوس',
+                    instructions: `
+                        <strong>مشاهده امواج طبیعی:</strong><br>
+                        • سه لایه موج با عمق‌های مختلف<br>
+                        • موج عمقی: حرکت آهسته و آرام<br>
+                        • موج میانی: سرعت و دامنه متوسط<br>
+                        • موج سطحی: سریع با کف‌آلود سفید<br>
+                        • هر لایه فرکانس و سرعت متفاوت دارد
+                    `
+                },
+                particles: {
+                    title: '✨ سیستم ذرات',
+                    instructions: `
+                        <strong>فیزیک ذرات:</strong><br>
+                        • شبیه‌سازی آتش، دود یا آب<br>
+                        • اعمال نیروی جاذبه<br>
+                        • مقاومت هوا و میرایی<br>
+                        • چرخه حیات ذرات
+                    `
+                },
+                fractal: {
+                    title: '🌳 درخت فراکتال',
+                    instructions: `
+                        <strong>هندسه فراکتال:</strong><br>
+                        • حرکت ماوس برای تغییر زاویه شاخه‌ها<br>
+                        • خودشباهی در مقیاس‌های مختلف<br>
+                        • الگوریتم بازگشتی<br>
+                        • کاربرد در طبیعت و هنر
+                    `
+                }
+            };
+            
+            infoPanel.innerHTML = `
+                <h3>${demoInfos[demo].title}</h3>
+                <div class="instructions">
+                    ${demoInfos[demo].instructions}
+                </div>
+            `;
+        }
+
+        // مقداردهی اولیه
+        window.onload = function() {
+            setDemo('gravity');
+        };
+    </script>
+</body>
+</html>
