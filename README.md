@@ -275,6 +275,188 @@ noStroke; // خاموش کردن حاشیه
 تابع loadPixels پیکسل‌های تصویر را لود می‌کند و در متغیری داخل p5.Image قرار می‌دهد.
 
 
+## 🌐 سه‌بعدی‌سازی و WebGL در p5.js
+
+کتابخانه‌ی **p5.js** به طور پیش‌فرض محیط دوبعدی (2D) ارائه می‌دهد، اما با استفاده از حالت **WebGL** می‌توان اشیاء سه‌بعدی را رسم و کنترل کرد.  
+**WebGL (Web Graphics Library)** یک API برای رندر گرافیک سه‌بعدی در مرورگر است که به کمک GPU سرعت بالایی دارد.
+
+### فعال‌سازی WebGL
+برای فعال کردن محیط سه‌بعدی کافی است در `createCanvas` حالت `"WEBGL"` را فعال کنیم:
+
+```javascript
+function setup() {
+  createCanvas(600, 400, WEBGL);
+}
+```
+## ⚡ ایجاد محیط سه‌بعدی
+
+- `createCanvas(width, height, WEBGL)` → فعال کردن حالت **WebGL** برای رسم سه‌بعدی.  
+- `resizeCanvas(width, height)` → تغییر سایز بوم هنگام تغییر اندازه صفحه.
+
+## 🔷 اشیای سه‌بعدی
+
+- `sphere(r)` → رسم **کره** با شعاع `r`.  
+- `box(w, h, d)` → رسم **مکعب** با ابعاد مشخص.  
+- `cone(r, h)` → رسم **مخروط**.  
+- `torus(r1, r2)` → رسم **دونات** (حلقه‌ی سه‌بعدی).  
+- `cylinder(r, h)` → رسم **استوانه** .
+
+## 🎨 نورپردازی و مواد
+
+- `ambientLight(r, g, b)` → نور محیطی که کل صحنه را روشن می‌کند.  
+- `pointLight(r, g, b, x, y, z)` → نور نقطه‌ای در موقعیت مشخص.  
+- `directionalLight(r, g, b, x, y, z)` → نور جهت‌دار .  
+- `emissiveMaterial(r, g, b)` → ماده‌ی خودتابان.  
+- `specularMaterial(r, g, b)` → ماده‌ی بازتابنده‌ی نور .  
+- `shininess(value)` → میزان درخشندگی سطح اشیا.
+
+## 🔄 چرخش و حرکت
+
+- `rotateX(angle)` → چرخش حول محور X.  
+- `rotateY(angle)` → چرخش حول محور Y.  
+- `rotateZ(angle)` → چرخش حول محور Z.  
+- `translate(x, y, z)` → جابه‌جایی اشیا در فضای سه‌بعدی.
+
+## 🪐 کنترل دوربین
+
+- `orbitControl()` → امکان چرخش و بزرگنمایی/کوچکنمایی با ماوس یا لمس صفحه.
+
+این توابع بخش کوچکی از توابع 3 بعدی سازی هستند. در ادامه با استفاده از این توابع چند مثال میزنیم.
+## مثال ها
+
+
+این مثال بخشی از مثال سایت p5 برداشته شده و از شکل های ساده هندسی استفاده شده است. در نهایت ما یک شی دیگر اضافه کرده ایم تا نشان دهیم هرشکلی را به صورت 3 بعدی پیاده سازی کرد:
+```javascript
+function setup() {
+  createCanvas(710, 400, WEBGL);
+  angleMode(DEGREES);
+  normalMaterial();
+
+  describe(
+    'Eight 3D shapes: a plane, box, cylinder, cone, torus, sphere, ellipsoid, and a custom 3D shape (replacing astronaut). Each shape is rotating in all directions.'
+  );
+}
+
+function draw() {
+  background(250);
+
+  // Plane
+  push();
+  translate(-250, -100, 0);
+  rotateWithFrameCount();
+  plane(70);
+  pop();
+
+  // Box
+  push();
+  translate(-75, -100, 0);
+  rotateWithFrameCount();
+  box(70, 70, 70);
+  pop();
+
+  // Cylinder
+  push();
+  translate(100, -100, 0);
+  rotateWithFrameCount();
+  cylinder(70, 70);
+  pop();
+
+  // Cone
+  push();
+  translate(275, -100, 0);
+  rotateWithFrameCount();
+  cone(50, 70);
+  pop();
+
+  // Torus
+  push();
+  translate(-250, 100, 0);
+  rotateWithFrameCount();
+  torus(50, 20);
+  pop();
+
+  // Sphere
+  push();
+  translate(-75, 100, 0);
+  rotateWithFrameCount();
+  stroke(0);
+  sphere(50);
+  pop();
+
+  // Ellipsoid
+  push();
+  translate(100, 100, 0);
+  rotateWithFrameCount();
+  ellipsoid(20, 40, 40);
+  pop();
+
+  // Custom 3D shape (replacing astronaut)
+  push();
+  translate(275, 100, 0);
+  rotateWithFrameCount();
+  rotateZ(45);
+  customShape();
+  pop();
+}
+
+function rotateWithFrameCount() {
+  rotateZ(frameCount);
+  rotateX(frameCount);
+  rotateY(frameCount);
+}
+
+function customShape() {
+  beginShape();
+  for (let i = 0; i < 360; i += 10) {
+    let x = 40 * cos(i) + 20 * cos(3*i);
+    let y = 40 * sin(i) + 20 * sin(3*i);
+    let z = 20 * sin(5*i);
+    vertex(x, y, z);
+  }
+  endShape(CLOSE);
+}
+
+
+```
+مثال زیر مثال ساده دیگری برای نشان دادن کاربرد توابع orbitControl و rotate در جهت های مختلف هندسی است:
+```javascript
+function setup() {
+  createCanvas(windowWidth, windowHeight, WEBGL);
+  angleMode(DEGREES);
+  strokeWeight(2); 
+  noFill();
+  stroke(32, 8, 64);
+  
+  describe(
+    'Users can click on the screen and drag to adjust their perspective in 3D space. The space contains a dense sphere of dark purple cubes on a light pink background.'
+  );
+}
+
+function draw() {
+  background(250, 180, 200);
+  orbitControl();
+
+  for (let zAngle = 0; zAngle <= 180; zAngle += 15) {
+    for (let xAngle = 0; xAngle < 360; xAngle += 15) {
+      push();
+      rotateZ(zAngle);
+      rotateX(xAngle);
+      translate(0, 400, 0);
+      box(15); 
+      pop();
+    }
+  }
+}
+
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
+```
+در نهایت با استفاده از ابزار های هوش مصنوعی با استفاده از توابعی که بالاتر تعریف کردیم، منظومه شمسی را به صورت 3 بعدی شبیه سازی کردیم. این بخش به صورت کامل تر در ویدئو نشان داده خواهد شد. تصویر آن:
+
+<img width="1907" height="831" alt="Screenshot (295)" src="https://github.com/user-attachments/assets/6d57ed60-58a6-430a-b8a9-a61f8fd24274" />
+
 </div>
 
 <div dir="rtl" align="right">
