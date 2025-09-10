@@ -1012,29 +1012,7 @@ function drawFractalDemo() {
 
 ---
 
-## 🖱️ تعامل با کاربر
 
- **mousePressed()** → شروع پرتاب توپ یا ایجاد اختلال در آونگ‌ها  
- **mouseReleased()** → ثبت پرتابه جدید و آغاز حرکت آن  
- **حرکت ماوس** → تغییر زاویه شاخه‌ها در فراکتال  
-
-مثال:  
-
-```javascript
-function mouseReleased() {
-  if(currentDemo === 'gravity' && isDragging) {
-    let velocity = createVector(mouseX - mouseStartX, mouseY - mouseStartY);
-    velocity.mult(0.3);
-    projectiles.push({
-      position: createVector(mouseStartX, mouseStartY),
-      velocity: velocity.copy(),
-      size: 12
-    });
-    stats.projectileCount++;
-    isDragging = false;
-  }
-}
-```
 
 ---
 
