@@ -414,8 +414,7 @@ function drawGravityDemo() {
         }
 
 
-
----
+```
 
 <div dir="rtl">
 
@@ -431,7 +430,7 @@ function drawGravityDemo() {
 
 </div>
 
----
+
 
 ## ⚖️ شبیه‌سازی آونگ
 
