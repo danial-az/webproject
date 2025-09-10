@@ -1044,7 +1044,7 @@ function mouseReleased() {
 
 [رفرنس مثال های ۳ بعدی ](https://p5js.org/examples/)
 
-[رفرنس p5.sound](https://p5js.org/reference/p5.sound/)
+[رفرنس p5.sound](https://p5js.org/reference/p5.sound/#p5.sound)
 
 [رفرنس p5js](https://p5js.org/reference/#/p5)
 
