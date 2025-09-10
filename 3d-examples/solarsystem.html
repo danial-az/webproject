@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="fa">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>منظومه شمسی سه بعدی</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            background-color: #000;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            direction: rtrl;
+        }
+        #sketch-container {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            width: 250px;
+            backdrop-filter: blur(5px);
+        }
+        .info {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            max-width: 300px;
+            backdrop-filter: blur(5px);
+        }
+        h1 {
+            text-align: center;
+            color: #ffcc00;
+            margin-top: 0;
+            text-shadow: 0 0 10px #ffcc00;
+        }
+        button {
+            background: #4a4af4;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #6a6aff;
+        }
+        .slider-container {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #ffcc00;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .planet-info {
+            display: none;
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            color: white;
+            max-width: 250px;
+            z-index: 200;
+            backdrop-filter: blur(5px);
+            border: 1px solid #444;
+            box-shadow: 0 0 20px rgba(255, 204, 0, 0.3);
+        }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div>در حال بارگذاری منظومه شمسی...</div>
+    </div>
+
+    <div id="sketch-container"></div>
+    
+    <div class="info">
+        <h1>منظومه شمسی سه بعدی </h1>
+        <p>سرعت چرخش: <span id="speed-value">1.0</span></p>
+    </div>
+    
+    <div class="controls">
+        <div class="slider-container">
+            <label for="speed-slider">سرعت چرخش:</label>
+            <input type="range" id="speed-slider" min="0" max="2" step="0.1" value="1">
+        </div>
+        <button id="pause-btn">توقف/شروع</button>
+        <button id="reset-btn">بازنشانی منظره</button>
+        <div class="slider-container">
+            <label for="scale-slider">مقیاس اندازه‌ها:</label>
+            <input type="range" id="scale-slider" min="0.5" max="2" step="0.1" value="1">
+        </div>
+        <button id="toggle-stars">ستاره‌های زمینه</button>
+        <button id="toggle-orbits">مدارها</button>
+    </div>
+
+    <div id="planet-info" class="planet-info"></div>
+
+    <script>
+        let stars = [];
+        let planets = [];
+        let rotationX = 0;
+        let rotationY = 0;
+        let isPaused = false;
+        let rotationSpeed = 1;
+        let scaleFactor = 1;
+        let showStars = true;
+        let showOrbits = true;
+        let textures = {};
+        let infoDiv;
+        let loadingDiv;
+
+        // اطلاعات سیارات با جزئیات بیشتر
+        const planetData = [
+            { 
+                name: "عطارد", 
+                radius: 15, 
+                distance: 100, 
+                speed: 0.04, 
+                color: [179, 157, 139], 
+                info: "نزدیک‌ترین سیاره به خورشید و کوچکترین سیاره در منظومه شمسی",
+                texture: "mercury",
+                rotationSpeed: 0.004,
+                hasRings: false
+            },
+            { 
+                name: "زهره", 
+                radius: 23, 
+                distance: 150, 
+                speed: 0.015, 
+                color: [237, 216, 167], 
+                info: "داغ‌ترین سیاره منظومه شمسی با ابرهای اسید سولفوریک",
+                texture: "venus",
+                rotationSpeed: 0.002,
+                hasRings: false
+            },
+            { 
+                name: "زمین", 
+                radius: 25, 
+                distance: 200, 
+                speed: 0.01, 
+                color: [91, 154, 213], 
+                info: "سیاره خانه ما، تنها مکانی که حیات در آن کشف شده است",
+                texture: "earth",
+                rotationSpeed: 0.01,
+                hasRings: false,
+                hasClouds: true
+            },
+            { 
+                name: "مریخ", 
+                radius: 20, 
+                distance: 250, 
+                speed: 0.008, 
+                color: [193, 68, 14], 
+                info: "سیاره سرخ با دو قمر به نام فوبوس و دیموس",
+                texture: "mars",
+                rotationSpeed: 0.009,
+                hasRings: false
+            },
+            { 
+                name: "مشتری", 
+                radius: 50, 
+                distance: 320, 
+                speed: 0.004, 
+                color: [216, 179, 132], 
+                info: "بزرگترین سیاره منظومه شمسی با لکه سرخ بزرگ",
+                texture: "jupiter",
+                rotationSpeed: 0.025,
+                hasRings: false
+            },
+            { 
+                name: "زحل", 
+                radius: 45, 
+                distance: 400, 
+                speed: 0.003, 
+                color: [237, 213, 165], 
+                info: "مشهور به خاطر حلقه‌های زیبای یخی و غباری",
+                texture: "saturn",
+                rotationSpeed: 0.022,
+                hasRings: true
+            },
+            { 
+                name: "اورانوس", 
+                radius: 35, 
+                distance: 480, 
+                speed: 0.002, 
+                color: [151, 220, 216], 
+                info: "سیاره ای که به پهلو می چرخد و دارای حلقه‌های عمودی است",
+                texture: "uranus",
+                rotationSpeed: 0.015,
+                hasRings: true
+            },
+            { 
+                name: "نپتون", 
+                radius: 34, 
+                distance: 550, 
+                speed: 0.001, 
+                color: [62, 84, 232], 
+                info: "دورترین سیاره از خورشید و دارای بادهای شدید",
+                texture: "neptune",
+                rotationSpeed: 0.016,
+                hasRings: true
+            }
+        ];
+
+        function setup() {
+            let canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+            canvas.parent('sketch-container');
+            
+            // ایجاد ستاره های زمینه با تنوع بیشتر
+            for (let i = 0; i < 1500; i++) {
+                let size = random(0.5, 3);
+                let brightness = random(100, 255);
+                stars.push({
+                    x: random(-width*2, width*2),
+                    y: random(-height*2, height*2),
+                    z: random(-width*2, width*2),
+                    size: size,
+                    brightness: brightness
+                });
+            }
+            
+            // ایجاد سیارات با جزئیات بیشتر
+            for (let i = 0; i < planetData.length; i++) {
+                let data = planetData[i];
+                planets.push({
+                    name: data.name,
+                    radius: data.radius,
+                    distance: data.distance,
+                    angle: random(TWO_PI),
+                    speed: data.speed,
+                    color: data.color,
+                    info: data.info,
+                    texture: data.texture,
+                    rotation: 0,
+                    rotationSpeed: data.rotationSpeed,
+                    hasRings: data.hasRings,
+                    hasClouds: data.hasClouds || false,
+                    cloudsRotation: 0,
+                    cloudsRotationSpeed: data.rotationSpeed * 1.2,
+                    moons: Math.floor(random(0, 4))
+                });
+            }
+            
+            infoDiv = select('#planet-info');
+            loadingDiv = select('#loading');
+            
+            // ایجاد تکستچرهای procedural برای سیارات
+            createProceduralTextures();
+            
+            // تنظیم کنترل‌ها
+            select('#speed-slider').input(() => {
+                rotationSpeed = select('#speed-slider').value();
+                select('#speed-value').html(rotationSpeed);
+            });
+            
+            select('#scale-slider').input(() => {
+                scaleFactor = select('#scale-slider').value();
+            });
+            
+            select('#pause-btn').mousePressed(() => {
+                isPaused = !isPaused;
+            });
+            
+            select('#reset-btn').mousePressed(() => {
+                rotationX = 0;
+                rotationY = 0;
+            });
+            
+            select('#toggle-stars').mousePressed(() => {
+                showStars = !showStars;
+            });
+            
+            select('#toggle-orbits').mousePressed(() => {
+                showOrbits = !showOrbits;
+            });
+            
+            // مخفی کردن صفحه loading پس از بارگذاری
+            setTimeout(() => {
+                loadingDiv.style('display', 'none');
+            }, 2000);
+        }
+
+        function createProceduralTextures() {
+            // در اینجا می‌توانید تکستچرهای procedural ایجاد کنید
+            // برای سادگی، از رنگ‌ها و نویز استفاده می‌کنیم
+        }
+
+        function draw() {
+            background(0, 10);
+            
+            // تنظیم نورپردازی پیشرفته
+            pointLight(255, 255, 200, 0, 0, 0);
+            pointLight(100, 100, 100, -width/2, -height/2, 200);
+            directionalLight(100, 100, 100, 0, -1, 0);
+            
+            orbitControl(1, 1, 0.5);
+            
+            // چرخش کل منظومه شمسی
+            rotateX(rotationX);
+            rotateY(rotationY);
+            
+            if (!isPaused) {
+                rotationY += 0.001 * rotationSpeed;
+            }
+            
+            // رسم سحابی و کهکشان زمینه
+            drawNebula();
+            
+            // رسم ستاره های زمینه
+            if (showStars) {
+                drawStars();
+            }
+            
+            // رسم خورشید با جزئیات بیشتر
+            drawSun();
+            
+            // رسم سیارات
+            for (let i = 0; i < planets.length; i++) {
+                drawPlanet(planets[i]);
+            }
+        }
+
+        function drawNebula() {
+            push();
+            noFill();
+            stroke(30, 10, 60, 50);
+            rotateX(frameCount * 0.0001);
+            rotateY(frameCount * 0.0001);
+            sphere(800);
+            pop();
+            
+
+        }
+
+        function drawStars() {
+            push();
+            fill(255);
+            noStroke();
+            for (let star of stars) {
+                push();
+                translate(star.x, star.y, star.z);
+                fill(star.brightness, star.brightness, star.brightness);
+                sphere(star.size);
+                pop();
+            }
+            pop();
+        }
+
+        function drawSun() {
+            push();
+            translate(0, 0, 0);
+
+            // هسته درونی خورشید (درخشان)
+            push();
+            noStroke();
+            ambientLight(200, 150, 0);
+            emissiveMaterial(255, 220, 100);
+            sphere(60 * scaleFactor);
+            pop();
+
+            // لایه بیرونی خورشید (پلاسما متحرک)
+            push();
+            rotateY(frameCount * 0.005);
+            rotateX(frameCount * 0.003);
+            noStroke();
+            fill(255, 140, 0, 180);
+            sphere(70 * scaleFactor);
+            pop();
+
+            // کرونا (هاله خورشید)
+            push();
+            noFill();
+            strokeWeight(2);
+            for (let i = 0; i < 3; i++) {
+                let size = 80 * scaleFactor + i * 10;
+                stroke(255, 200, 0, 60 - i * 15);
+                sphere(size);
+            }
+            pop();
+
+            pop();
+        }
+
+        function drawPlanet(planet) {
+            if (!isPaused) {
+                planet.angle += planet.speed * rotationSpeed;
+                planet.rotation += planet.rotationSpeed;
+                planet.cloudsRotation += planet.cloudsRotationSpeed;
+            }
+            
+            let x = cos(planet.angle) * planet.distance * scaleFactor;
+            let z = sin(planet.angle) * planet.distance * scaleFactor;
+            
+            push();
+            translate(x, 0, z);
+            
+            // رسم مدار سیاره
+            if (showOrbits) {
+                push();
+                rotateX(HALF_PI);
+                noFill();
+                stroke(60, 50);
+                ellipse(0, 0, planet.distance * scaleFactor * 2, planet.distance * scaleFactor * 2);
+                pop();
+            }
+            
+            // چرخش سیاره به دور خودش
+            rotateY(planet.rotation);
+            
+            // رسم سیاره با جزئیات
+            push();
+            noStroke();
+            
+            // استفاده از رنگ و سایه برای ایجاد بافت
+            if (planet.texture === "mercury") {
+                fill(179, 157, 139);
+                emissiveMaterial(100, 90, 80);
+                specularMaterial(179, 157, 139);
+                shininess(5);
+            } else if (planet.texture === "venus") {
+                fill(237, 216, 167);
+                emissiveMaterial(120, 110, 90);
+                specularMaterial(237, 216, 167);
+                shininess(10);
+            } else if (planet.texture === "earth") {
+                fill(91, 154, 213);
+                emissiveMaterial(30, 50, 70);
+                specularMaterial(91, 154, 213);
+                shininess(15);
+            } else if (planet.texture === "mars") {
+                fill(193, 68, 14);
+                emissiveMaterial(90, 30, 10);
+                specularMaterial(193, 68, 14);
+                shininess(5);
+            } else if (planet.texture === "jupiter") {
+                fill(216, 179, 132);
+                emissiveMaterial(100, 80, 60);
+                specularMaterial(216, 179, 132);
+                shininess(20);
+            } else if (planet.texture === "saturn") {
+                fill(237, 213, 165);
+                emissiveMaterial(110, 100, 80);
+                specularMaterial(237, 213, 165);
+                shininess(25);
+            } else if (planet.texture === "uranus") {
+                fill(151, 220, 216);
+                emissiveMaterial(70, 100, 100);
+                specularMaterial(151, 220, 216);
+                shininess(30);
+            } else if (planet.texture === "neptune") {
+                fill(62, 84, 232);
+                emissiveMaterial(30, 40, 110);
+                specularMaterial(62, 84, 232);
+                shininess(35);
+            }
+            
+            sphere(planet.radius * scaleFactor);
+            pop();
+            
+           
+            
+            // رسم حلقه‌های زحل و اورانوس و نپتون
+            if (planet.hasRings) {
+                push();
+                rotateX(HALF_PI);
+                noFill();
+                
+                if (planet.texture === "saturn") {
+                    // حلقه‌های زحل
+                    for (let r = 1; r <= 3; r++) {
+                        let ringSize = planet.radius * scaleFactor * (1 + r * 0.3);
+                        stroke(210, 180, 140, 150 - r * 30);
+                        ellipse(0, 0, ringSize * 2, ringSize * 1.5);
+                    }
+                } else {
+                    // حلقه‌های اورانوس و نپتون
+                    for (let r = 1; r <= 2; r++) {
+                        let ringSize = planet.radius * scaleFactor * (1 + r * 0.2);
+                        stroke(200, 200, 200, 100 - r * 30);
+                        ellipse(0, 0, ringSize * 2, ringSize * 0.8);
+                    }
+                }
+                pop();
+            }
+            
+            // رسم قمرها
+            if (planet.moons > 0) {
+                for (let m = 0; m < planet.moons; m++) {
+                    let moonAngle = frameCount * 0.02 + m * HALF_PI;
+                    let moonX = cos(moonAngle) * (planet.radius * scaleFactor + 15);
+                    let moonZ = sin(moonAngle) * (planet.radius * scaleFactor + 15);
+                    let moonY = sin(frameCount * 0.01 + m) * 5;
+                    
+                    push();
+                    translate(moonX, moonY, moonZ);
+                    fill(200);
+                    emissiveMaterial(80, 80, 80);
+                    sphere(5 * scaleFactor);
+                    pop();
+                }
+            }
+            
+            pop();
+        }
+
+        function mousePressed() {
+            // بررسی کلیک روی سیارات برای نمایش اطلاعات
+            let foundPlanet = false;
+            for (let planet of planets) {
+                let x = cos(planet.angle) * planet.distance * scaleFactor;
+                let z = sin(planet.angle) * planet.distance * scaleFactor;
+                
+                // محاسبه موقعیت سیاره در صفحه نمایش
+                let screenPos = calculateScreenPosition(x, 0, z);
+                
+                // بررسی فاصله کلیک ماوس از موقعیت سیاره
+                let d = dist(mouseX, mouseY, screenPos.x, screenPos.y);
+                if (d < planet.radius * scaleFactor * 2) {
+                    infoDiv.html(`
+                        <h3>${planet.name}</h3>
+                        <p>${planet.info}</p>
+                        <p>تعداد قمرها: ${planet.moons}</p>
+                        <p>فاصله از خورشید: ${planet.distance} واحد</p>
+                    `);
+                    infoDiv.style('display', 'block');
+                    infoDiv.position(mouseX + 15, mouseY + 15);
+                    foundPlanet = true;
+                    break;
+                }
+            }
+            
+            if (!foundPlanet) {
+                infoDiv.style('display', 'none');
+            }
+        }
+
+        function calculateScreenPosition(x, y, z) {
+            // تبدیل مختصات سه بعدی به دو بعدی برای تشخیص کلیک
+            let pos = new p5.Vector(x, y, z);
+            let modelView = _renderer.uMVMatrix.copy();
+            modelView.transpose();
+            let projected = modelView.multiplyPoint(pos);
+            
+            let screenX = map(projected.x, -width/2, width/2, 0, width);
+            let screenY = map(projected.y, -height/2, height/2, height, 0);
+            
+            return {x: screenX, y: screenY};
+        }
+
+        function windowResized() {
+            resizeCanvas(windowWidth, windowHeight);
+        }
+    </script>
+</body>
+</html>
