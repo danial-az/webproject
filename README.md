@@ -1042,6 +1042,10 @@ function mouseReleased() {
 
 ## منابع
 
+[رفرنس مثال های ۳ بعدی ](https://p5js.org/examples/)
+
+[رفرنس p5.sound](https://p5js.org/reference/p5.sound/)
+
 [رفرنس p5js](https://p5js.org/reference/#/p5)
 
 [کانال The Coding Train](https://www.youtube.com/channel/UCvjgXvBlbQiydffZU7m1_aw)
